@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// iPhone/iPad zoom the page in when a field with small text is tapped (search box, size and 背號 menus);
+// capping the scale stops that, and pinch-zoom still works there
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))
+  document.querySelector('meta[name="viewport"]').content += ", maximum-scale=1";
+</script>
+<title>KBO 球衣庫存查詢</title>
+<style>
+  :root { --bg:#f6f5fb; --card:#fff; --ink:#1c1c1c; --muted:#6b6b6b; --line:#e4e1ef; --ok:#12733d; --ok-bg:#e3f4ea; --no:#a0a0a0; --no-bg:#eeedf3; --accent:#14235f; --bar:#dcd6f7; --bar-ink:#14235f; --bar-line:#c9c1ee; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141318; --card:#1e1e1e; --ink:#eee; --muted:#9a9a9a; --line:#333; --ok:#7fdca4; --ok-bg:#173524; --no:#6a6a6a; --no-bg:#262626; --accent:#b9adf5; --bar:#2a2550; --bar-ink:#e9e5ff; --bar-line:#3d3670; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", "Apple SD Gothic Neo", sans-serif; }
+  header { padding:20px 16px 8px; max-width:1200px; margin:0 auto; }
+  h1 { margin:0; font-size:22px; }
+  #updated { font-size:13px; opacity:.8; }
+  #updated span + span::before { content:" · "; }
+  #updated b { font-weight:700; }
+  #updated a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+  /* the banner uses the shop logo's lavender with navy text; in dark mode a deep purple of the same family (--bar*) */
+  .top { position:sticky; top:0; z-index:2; background:var(--bar); color:var(--bar-ink); border-bottom:1px solid var(--bar-line); }
+  .top label.check { color:var(--bar-ink); }  /* title + filters stay on screen while scrolling */
+  .filters > div { max-width:1200px; margin:0 auto; padding:10px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:4px 12px; font:inherit; font-size:13px; cursor:pointer; }
+  .chip[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #teams .chip { font-size:16px; font-weight:600; padding:8px 18px; }  /* teams: the main choice */
+  #cats .chip { font-size:12px; padding:2px 10px; }                    /* categories: secondary */
+  .pick, #perPage { display:none; }
+  @media (max-width:640px) {  /* phones: team and category become two dropdowns instead of chip rows; desktop keeps the chips */
+    #teams, #cats { display:none !important; }
+    .pick { display:block; flex:1 1 0; min-width:0; font-size:16px; font-weight:600; padding:9px 10px; }  /* team | category side by side */
+    .pick[hidden] { display:none; }
+    /* a short banner: small title, one-line info, tight rows */
+    header { padding:8px 12px 2px; }
+    h1 { font-size:21px; }
+    #updated { font-size:12px; line-height:1.35; }
+    #updated span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #updated span + span::before { content:""; }
+    .filters > div { padding:4px 12px 7px; gap:6px; }
+    #size, #sort, #q { font-size:15px; padding:8px 8px; }
+    #size, #sort { flex:none; max-width:31%; }
+    label.check { font-size:15px; }
+    #q { min-width:0; }
+    .filters > div::before { content:""; flex-basis:100%; order:1; height:0; margin:-3px 0; }  /* line break after the two dropdowns */
+    #size, #sort, label.check, #q, #perPage { order:2; }
+    /* 4 件 / 2 件 switch (phones only): how many jerseys fill one screen */
+    #perPage { display:block; flex:none; font:inherit; font-size:14px; font-weight:600; padding:8px 10px; border-radius:8px;
+               border:1px solid var(--bar-ink); background:var(--bar-ink); color:var(--bar); white-space:nowrap; }
+    /* "2 件": one row of two tall cards fills the screen; bigger text, the photo takes the rest */
+    .two main { grid-auto-rows:calc(100svh - var(--top, 150px) - 12px); }
+    .two .body { padding:8px 9px 10px; gap:6px; }
+    .two .name { font-size:16px; line-height:1.3; -webkit-line-clamp:4; }
+    .two .tag { display:block; font-size:11px; }
+    .two .price { font-size:17px; }
+    .two .ship { font-size:12px; white-space:normal; }
+    .two .sizes { gap:5px; max-height:none; }
+    .two .size { font-size:13px; padding:2px 7px; border-radius:6px; }
+    .two .kits { gap:6px; max-height:none; }
+    .two select.kit { font-size:14px; padding:6px 6px; }
+    .two .custom { font-size:12px; padding:3px 9px; }
+    .batches { display:none; }  /* no room in the four-per-screen cards */
+    .two .batches { display:block; }
+  }
+  @media (prefers-color-scheme: dark) { .chip[aria-pressed="true"] { color:#111; } }
+  select, input[type=search] { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink); }
+  input[type=search] { flex:1; min-width:160px; }
+  label.check { display:flex; gap:6px; align-items:center; font-size:14px; }
+  label.check[hidden] { display:none; }
+  .fixedkit { font-size:13px; font-weight:600; margin-top:6px; }
+  #sort[hidden] { display:none; }
+  main { max-width:1200px; margin:0 auto; padding:16px; display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; position:relative; }
+  .custom { position:absolute; top:10px; left:10px; background:#14235f; color:#fff; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; }
+  .card img { width:100%; aspect-ratio:1; object-fit:cover; background:var(--no-bg); display:block; }
+  .body { padding:12px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .tag { font-size:12px; color:var(--muted); }
+  .name { font-weight:600; font-size:14px; }
+  .name a { color:inherit; text-decoration:none; }
+  .name a:hover { text-decoration:underline; }
+  .price { font-size:14px; }
+  .ship { font-size:12px; color:#b45309; }
+  .ship.free { color:#15803d; }
+  .sizes { display:flex; flex-wrap:wrap; gap:4px; }
+  .size { font-size:12px; padding:2px 7px; border-radius:6px; background:var(--ok-bg); color:var(--ok); white-space:nowrap; }
+  .size.out { background:var(--no-bg); color:var(--no); text-decoration:line-through; }
+  .size.hit { outline:2px solid var(--ok); }
+  .kits { display:flex; flex-direction:column; gap:4px; margin-top:4px; }
+  .batches { font-size:11px; color:var(--muted); line-height:1.5; }
+  .batches a { color:inherit; }
+  select.kit { width:100%; font-size:12px; padding:4px 6px; }
+  @media (max-width:640px) {  /* phones only: two jerseys per row (about four on screen); desktop is unchanged */
+    main { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; padding:10px; }
+    .body { padding:8px; gap:5px; }
+    .name { font-size:13px; }
+    .tag { font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .price { font-size:13px; }
+    .ship { font-size:10px; }
+    .size { font-size:11px; padding:1px 5px; }
+    .custom { top:6px; left:6px; font-size:10px; padding:2px 7px; }
+    select.kit { font-size:11px; padding:4px; min-width:0; }
+    /* exactly two rows (four jerseys) fill the screen below the banner, on any phone: the row height is worked out
+       from the visible screen height (svh = with the browser's bars showing) and the banner height (--top, set by
+       script); the photo takes whatever room the text leaves, shown whole */
+    main { gap:5px; padding:5px 6px 6px; grid-auto-rows:calc((100svh - var(--top, 150px) - 13px) / 2); }
+    .card { border-radius:10px; min-height:0; }
+    .card img { flex:1 1 0; min-height:0; height:auto; aspect-ratio:auto; object-fit:contain; background:#fff; }
+    .body { flex:none; padding:5px 7px 6px; gap:3px; }
+    .name { font-size:12px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .tag { display:none; }
+    .price { font-size:13px; font-weight:600; }
+    .ship { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sizes { gap:3px; max-height:36px; overflow:hidden; }
+    .size { font-size:10px; padding:0 4px; border-radius:4px; }
+    .kits { gap:3px; margin-top:1px; max-height:49px; overflow:hidden; }
+    select.kit { padding:1px 4px; }
+  }
+  #empty { grid-column:1/-1; text-align:center; color:var(--muted); padding:40px 0; }
+</style>
+</head>
+<body>
+<div class="top">
+<header>
+  <h1>KBO 球衣庫存查詢</h1>
+  <div id="updated"></div>
+</header>
+<div class="filters"><div>
+  <div class="chips" id="teams"></div>
+  <div class="chips" id="cats" style="flex-basis:100%"></div>
+  <select class="pick" id="teamSel" aria-label="球隊"></select>
+  <select class="pick" id="catSel" aria-label="分類"></select>
+  <select id="size" aria-label="尺寸"><option value="">全尺寸</option></select>
+  <select id="sort" aria-label="排序"><option value="">排序</option><option value="asc">價錢低到高</option><option value="desc">價錢高到低</option></select>
+  <label class="check"><input type="checkbox" id="instock" checked> 只看有貨</label>
+  <input type="search" id="q" placeholder="搜尋名稱">
+  <button type="button" id="perPage" aria-label="切換一個畫面顯示幾件球衣"></button>
+</div></div>
+</div>
+<main id="list"></main>
+
+<script>
+// index.html?set=nc-kiwoom loads data-nc-kiwoom.js instead of data.js
+const set = new URLSearchParams(location.search).get("set");
+document.write('<script src="data' + (/^[\w-]+$/.test(set || "") ? "-" + set : "") + '.js?v=' + Date.now() + '"><\/script>');
+document.write('<script src="prices.js?v=' + Date.now() + '"><\/script>');
+</script>
+<script>
+// the public build ships its data scrambled (see build_site.py); undo that here
+if (window.__d) {
+  const bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const key = bytes(window.__k), mixed = bytes(window.__d).reverse();
+  window.DATA = JSON.parse(new TextDecoder().decode(mixed.map((b, n) => b ^ key[n % key.length] ^ (n * 7 & 255))));
+  delete window.__d; delete window.__k;
+}
+const DATA = window.DATA || { items: [], updated: null };
+const state = { team: "", cat: "", size: "", instock: true, q: "", sort: "" };
+
+// "95(M)", "MD(95)", "095" and "95" all mean the same chest size
+const sizeKey = s => { const m = String(s).match(/\d{2,3}/); return m && !/키즈|세|Y[A-Z]/.test(s) ? String(+m[0]) : null; };
+
+// teams whose shops the crawler cannot read yet still get a chip (not on the public build)
+const PENDING = DATA.shop ? [] : ["樂天巨人", "起亞虎"];
+// fixed order for the team buttons (the crawl order changes from run to run); teams not listed go to the end
+const TEAM_ORDER = ["國家代表隊", "LG 雙子", "斗山熊", "培證英雄", "KT 巫師", "韓華鷹", "NC 恐龍", "三星獅", "樂天巨人", "起亞虎", "SSG 登陸者"];
+const teamRank = t => (TEAM_ORDER.indexOf(t) + 1) || TEAM_ORDER.length + 1;
+const teams = [...new Set([...DATA.items.map(i => i.team), ...PENDING])].sort((a, b) => teamRank(a) - teamRank(b));
+const sizeKeys = [...new Set(DATA.items.flatMap(i => i.sizes.map(s => sizeKey(s.size))).filter(Boolean))].sort((a, b) => a - b);
+
+// resale prices come from prices.js (generated from prices.csv by prices.py)
+const PRICES = Object.assign({ tiers: {}, items: {}, names: {}, categories: {}, kits: {} }, window.PRICES);
+// the public build (build_site.py) ships jerseys with zh/twd already filled in and no shop url or KRW price
+const zhName = i => i.zh || PRICES.names[itemId(i.url)] || i.name;
+const zhCat = c => PRICES.categories[c] || c;
+// jerseys whose 背號 dropdown offers a custom name/number choice (wording comes from marking-names.csv)
+const CUSTOM = "可客製化背號球衣";
+const playerZh = (k, p) => p.zh || (PRICES.players || {})[k.name + "|" + p.name] || p.name;
+const isCustom = i => (i.markings || []).some(k => k.players.some(p => p.available && playerZh(k, p).includes("客製化")));
+// jerseys the shop has cut the price of (crawler sets "was" = KRW price before the cut; the public build only ships "sale")
+const SALE = "降價球衣";
+const isSale = i => !!(i.sale || i.was);
+// per-team categories for one player: jerseys whose 背號 dropdown has that player (still available), owner's request
+// in that category the card shows the player's 背號 fixed (no dropdown) and one price: jersey + 背號 - discount;
+// the discount depends on the jersey's (Chinese) category name: the first key it contains wins
+const PLAYER_CATS = { "韓華鷹": { "王彥程背號球衣": { ko: "왕옌청", label: "19 왕옌청 (王彥程)", discount: { "球迷版": 150, "球員版": 150 } } } };
+const discountOf = (i, pc) => {
+  const names = (i.categories || []).map(zhCat).join(" ");
+  const key = Object.keys(pc.discount || {}).find(k => names.includes(k));
+  return key ? pc.discount[key] : 0;
+};
+// jerseys that take a custom name/number count too: the customer can have that player's name put on (owner's request)
+// 只看有貨 on (always on the public site): the player's 背號 must still be available; off (owner's page): any jersey listing him
+const hasPlayer = (i, ko) => isCustom(i) || (i.markings || []).some(k => k.players.some(p => p.name.includes(ko)
+  && (p.available || !state.instock)));
+const playerCat = (i, c) => (PLAYER_CATS[i.team] || {})[c];
+const inCat = (i, c) => c === CUSTOM ? isCustom(i) : c === SALE ? isSale(i)
+  : playerCat(i, c) ? hasPlayer(i, playerCat(i, c).ko) : (i.categories || []).includes(c);
+const itemId = url => {
+  if (!url) return "";
+  const m = url.match(/\/product\/[^?]*?\/(\d+)\/category\/|goodsNo=(\d+)|productId=(\d+)|\/category\/detail\/(\d+)|itemId=(\d+)|PROD_CD=(\w+)/);
+  return m ? url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0] + "/" + (m[1] || m[2] || m[3] || m[4] || m[5] || m[6]) : url;
+};
+// a per-jersey price wins; otherwise use the price table keyed by the shop's KRW price
+const shipFee = i => i.ship || (PRICES.ship || {})[itemId(i.url)];  // shop charges shipping below its free-shipping threshold
+// does jersey + this 背號 reach the free-shipping threshold? (public site ships a ready-made "free" flag instead of KRW prices)
+// a choice with its own KRW price: from the shop page, or the kit price plus the 加價 in marking-names.csv
+const ownKrw = (k, p) => p.price || (PRICES.playerKrw || {})[k.name + "|" + p.name];
+const kitFree = (i, k, p) => {
+  const flag = p && p.free !== undefined ? p.free : k.free;
+  if (flag !== undefined) return flag;
+  const limit = (PRICES.shipping || {})[i.team];
+  return !!limit && (i.price || 0) + ((p && ownKrw(k, p)) || k.price || 0) >= limit;
+};
+const shipText = i => "單買另加運費 NT$" + shipFee(i) + ((i.markings || []).some(k => kitFree(i, k)) ? "(加購背號免加)" : "");
+const priceOf = i => { const id = itemId(i.url), tier = PRICES.tiers[i.price];  // 代購價 in TWD, or undefined
+  return i.twd || PRICES.items[id] || (tier && tier + ((PRICES.extra || {})[id] || 0)) || undefined; };
+const priceText = i => { const p = shownPrice(i); return p ? "NT$" + p.toLocaleString() : "價格請洽詢"; };
+// the 背號 choice used in a player category: that player's own choice, or else the custom name/number choice
+const playerChoice = (i, pc) => {
+  const all = (i.markings || []).flatMap(k => k.players.map(p => ({ k, p })));
+  return all.find(x => x.p.available && x.p.name.includes(pc.ko)) || all.find(x => x.p.available && playerZh(x.k, x.p).includes("客製化"))
+    || all.find(x => x.p.name.includes(pc.ko));  // owner's page with 只看有貨 off: priced as if his 背號 were available
+};
+const choiceCost = ({ k, p }) => p.twd || PRICES.tiers[ownKrw(k, p)] || k.twd || PRICES.tiers[k.price];
+const activePlayerCat = i => state.cat && playerCat(i, state.cat);
+const shownPrice = i => {  // jersey + the player's 背號 - discount while that player's category is open
+  const pc = activePlayerCat(i), base = priceOf(i), x = pc && playerChoice(i, pc);
+  if (!pc || !base) return base;
+  // jerseys sold with a mandatory 背號 (surcharges.csv, e.g. 韓華 열마킹) already carry its price: don't add it twice
+  const kit = (PRICES.extra || {})[itemId(i.url)] && !PRICES.items[itemId(i.url)] || i.kitIncluded ? 0 : x && choiceCost(x);
+  return kit === undefined || kit === null ? base : base + kit - discountOf(i, pc);
+};
+
+// 背號 (marking kits: name + number sets sold as add-ons): one dropdown per kit, listing its players
+function markingRows(i) {
+  if (!(i.markings || []).length) return "";
+  return el("div", { className: "kits", onchange: e => {  // picking a 背號 may lift the order over the free-shipping threshold
+      const note = e.currentTarget.closest(".card").querySelector(".ship");
+      if (!note) return;
+      const free = [...e.currentTarget.querySelectorAll("select")].some(s => s.selectedIndex > 0 && s.selectedOptions[0].dataset.free);
+      note.textContent = free ? "已加購背號,免另加運費" : shipText(i);
+      note.classList.toggle("free", free);
+    } },
+    ...i.markings.map(k => {
+      const twd = k.twd || PRICES.tiers[k.price];
+      const title = (k.zh || PRICES.kits[k.name] || k.name) + (twd ? " NT$" + twd.toLocaleString() : "");
+      return el("select", { className: "kit", ariaLabel: title },
+        el("option", { value: "", textContent: title }),
+        ...k.players.map(p => {
+          const cost = p.twd || PRICES.tiers[ownKrw(k, p)] || twd;  // own price when it differs from the kit's (e.g. captain marking)
+          const o = el("option", { textContent: playerZh(k, p) + (cost ? "＋NT$" + cost.toLocaleString() : "") + (p.available ? "" : "(售完)"), disabled: !p.available });
+          if (kitFree(i, k, p)) o.dataset.free = "1";
+          return o;
+        }));
+    }));
+}
+
+// player category: a fixed 背號 line instead of the dropdowns; the shipping note only when jersey + 背號 is still under the threshold
+function playerRows(i) {
+  const pc = activePlayerCat(i), x = playerChoice(i, pc);
+  return [shipFee(i) && !(x && kitFree(i, x.k, x.p)) ? el("div", { className: "ship", textContent: "單買另加運費 NT$" + shipFee(i) }) : "",
+          el("div", { className: "fixedkit", textContent: "背號:" + pc.label })];
+}
+
+const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+
+function renderFilters() {
+  const box = document.getElementById("teams");
+  box.replaceChildren(...["", ...teams].map(t => {
+    const b = el("button", { className: "chip", textContent: t || "全部球隊" });
+    b.setAttribute("aria-pressed", state.team === t);
+    b.onclick = () => { const x = box.scrollLeft; state.team = t; state.cat = ""; renderFilters(); render(); box.scrollLeft = x; };
+    return b;
+  }));
+  // the shop's own categories, shown once a team that has them is picked
+  const mine = state.team ? DATA.items.filter(i => i.team === state.team) : [];
+  const cats = [...new Set(mine.flatMap(i => i.categories || []))];
+  for (const [c, pc] of Object.entries(PLAYER_CATS[state.team] || {}))
+    if (cats.length && mine.some(i => hasPlayer(i, pc.ko))) cats.push(c);
+  if (cats.length && mine.some(isCustom)) cats.push(CUSTOM);
+  // 降價球衣 is left out when one of the shop's own categories already lists exactly the same jerseys (KIA's 出清球衣)
+  const shown = mine.filter(i => !state.instock || i.sizes.some(s => s.available));
+  const onSale = shown.filter(isSale);
+  const sameAsShopCategory = cats.some(c => c !== CUSTOM && !(PLAYER_CATS[state.team] || {})[c] && (list => list.length === onSale.length && list.every(isSale))(shown.filter(i => inCat(i, c))));
+  if (cats.length && onSale.length && !sameAsShopCategory) cats.push(SALE);
+  const catBox = document.getElementById("cats");
+  catBox.hidden = !cats.length;
+  catBox.replaceChildren(...(cats.length ? ["", ...cats] : []).map(c => {
+    const b = el("button", { className: "chip", textContent: c ? zhCat(c) : "全部分類" });
+    b.setAttribute("aria-pressed", state.cat === c);
+    b.onclick = () => { const x = catBox.scrollLeft; state.cat = c; renderFilters(); render(); catBox.scrollLeft = x; };
+    return b;
+  }));
+  // phones show the same two choices as dropdowns
+  const teamSel = document.getElementById("teamSel"), catSel = document.getElementById("catSel");
+  teamSel.replaceChildren(...["", ...teams].map(t => el("option", { value: t, textContent: t || "全部球隊", selected: state.team === t })));
+  teamSel.onchange = () => { state.team = teamSel.value; state.cat = ""; renderFilters(); render(); };
+  catSel.hidden = !cats.length;
+  catSel.replaceChildren(...["", ...cats].map(c => el("option", { value: c, textContent: c ? zhCat(c) : "全部分類", selected: state.cat === c })));
+  catSel.onchange = () => { state.cat = catSel.value; renderFilters(); render(); };
+}
+
+function render() {
+  const q = state.q.trim().toLowerCase();
+  const items = DATA.items.filter(i => {
+    if (state.team && i.team !== state.team) return false;
+    if (state.cat && !inCat(i, state.cat)) return false;
+    if (q && !(i.name + " " + zhName(i)).toLowerCase().includes(q)) return false;
+    const pool = state.size ? i.sizes.filter(s => sizeKey(s.size) === state.size) : i.sizes;
+    if (state.size && !pool.length) return false;
+    return !state.instock || pool.some(s => s.available);
+  });
+  const list = document.getElementById("list");
+  if (state.sort)  // by 代購價; jerseys without a price go last either way
+    items.sort((a, b) => { const x = shownPrice(a), y = shownPrice(b);
+      return x && y ? (state.sort === "asc" ? x - y : y - x) : x ? -1 : y ? 1 : 0; });
+  list.replaceChildren(...items.map(i => {
+    const link = i.url ? el("a", { href: i.url, target: "_blank", rel: "noopener", textContent: zhName(i) }) : zhName(i);
+    return el("article", { className: "card" },
+      i.image ? el("img", { src: i.image, alt: "", loading: "lazy", referrerPolicy: "no-referrer" }) : "",
+      isCustom(i) ? el("span", { className: "custom", textContent: "可客製化背號" }) : "",
+      el("div", { className: "body" },
+        el("div", { className: "name" }, link),
+        zhName(i) !== i.name ? el("div", { className: "tag", textContent: i.name }) : "",
+        el("div", { className: "price", textContent: priceText(i) }),
+        ...(activePlayerCat(i) ? playerRows(i) : [shipFee(i) ? el("div", { className: "ship", textContent: shipText(i) }) : ""]),
+        el("div", { className: "sizes" }, ...i.sizes.map(s => el("span", {
+          className: "size" + (s.available ? "" : " out") + (state.size && sizeKey(s.size) === state.size ? " hit" : ""),
+          textContent: s.size + (s.qty ? " ×" + s.qty : ""),
+          title: s.available ? "有貨" : "售完",
+        }))),
+        activePlayerCat(i) ? "" : markingRows(i),
+        // owner's page only: which production batch (separate product page) has which sizes
+        i.batches ? el("div", { className: "batches" }, ...i.batches.map(b => el("div", {},
+          el("a", { href: b.url, target: "_blank", rel: "noopener", textContent: b.label }),
+          ":" + (b.sizes.map(s => s.size + (s.qty ? "×" + s.qty : "")).join("、") || "無庫存")))) : ""));
+  }));
+  if (!items.length) list.append(el("div", { id: "empty", textContent: PENDING.includes(state.team) && !DATA.items.some(i => i.team === state.team) ? "這一隊的官方商城還抓不到資料,球衣整理中" : "沒有符合條件的球衣" }));
+}
+
+document.getElementById("size").append(...sizeKeys.map(k => el("option", { value: k, textContent: k })));
+document.getElementById("size").onchange = e => { state.size = e.target.value; render(); };
+document.getElementById("sort").onchange = e => { state.sort = e.target.value; render(); };
+document.getElementById("instock").onchange = e => { state.instock = e.target.checked; renderFilters(); render(); };
+document.getElementById("q").oninput = e => { state.q = e.target.value; render(); };
+// two parts (shop + LINE link | count + time) so a phone can put them on two lines instead of cutting the time off
+if (DATA.updated) {
+  const when = new Date(DATA.updated).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const info = document.getElementById("updated");
+  // "由 <b>店名</b> 整理 · 代購請洽 <a>LINE</a>": same colour as the title, the shop name in bold
+  if (DATA.shop) info.append(el("span", {}, "由 ", DATA.shopUrl ? el("a", { href: DATA.shopUrl, target: "_blank", rel: "noopener" }, el("b", { textContent: DATA.shop }))
+                                                            : el("b", { textContent: DATA.shop }), " 整理",
+    ...(DATA.line ? [" · " + (DATA.line.lead || ""), el("a", { href: DATA.line.url, target: "_blank", rel: "noopener", textContent: DATA.line.text })] : [])));
+  info.append(el("span", { textContent: `${DATA.items.length} 件球衣 · 更新於 ${when}` }));
+} else document.getElementById("updated").textContent = "尚無資料,請先執行 python3 crawler.py";
+if (DATA.shop) {  // public build
+  document.querySelector("label.check").hidden = true;  // no 只看有貨 switch for customers: it stays on, sold-out jerseys are not listed
+} else document.getElementById("sort").hidden = true;  // price sorting is for customers only (owner's request)
+// phones: a button switches between four and two jerseys per screen; the choice is remembered on that phone
+const perPage = document.getElementById("perPage");
+const setPerPage = two => {
+  document.documentElement.classList.toggle("two", two);
+  perPage.textContent = two ? "2 件" : "4 件";
+  try { localStorage.setItem("per-page", two ? "2" : "4"); } catch (e) {}
+};
+perPage.onclick = () => setPerPage(!document.documentElement.classList.contains("two"));
+let savedPerPage = null;
+try { savedPerPage = localStorage.getItem("per-page"); } catch (e) {}
+setPerPage(savedPerPage === "2");
+// phones size the jersey rows from the banner height (see the CSS for main)
+const topBar = document.querySelector(".top");
+const setTop = () => document.documentElement.style.setProperty("--top", topBar.offsetHeight + "px");
+if (window.ResizeObserver) new ResizeObserver(setTop).observe(topBar);
+addEventListener("resize", setTop);
+renderFilters();
+render();
+setTop();
+// read the price table straight from the CSV, so saving it and reloading is enough
+// (the public build has no CSV; its prices are already in the data)
+fetch("price-table.csv?v=" + Date.now()).then(r => r.ok ? r.text() : "").then(text => {
+  for (const line of text.split(/\r?\n/).slice(1)) {
+    const [krw, twd] = line.split(",");
+    const price = parseInt((twd || "").replace(/[^\d]/g, ""), 10);
+    if (parseInt(krw, 10) && price) PRICES.tiers[parseInt(krw, 10)] = price;
+  }
+  render();
+}).catch(() => {});
+</script>
+</body>
+</html>

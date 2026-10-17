@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>KR YAGU</title>
+<style>
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#f5f4f0;
+         font:16px -apple-system, "PingFang TC", sans-serif; color:#1c1c1c; }
+  @media (prefers-color-scheme: dark) { body { background:#161616; color:#eee; } input { background:#222; color:#eee; } }
+  form { width:min(320px, 86vw); display:flex; flex-direction:column; gap:12px; }
+  input[type=password] { font:inherit; padding:12px; border:1px solid #bbb; border-radius:10px; }
+  button { font:inherit; font-weight:600; padding:12px; border:0; border-radius:10px; background:#14235f; color:#fff; }
+  label { font-size:14px; display:flex; gap:6px; align-items:center; }
+  #msg { min-height:1.4em; font-size:14px; color:#b45309; }
+</style>
+</head>
+<body>
+<form id="f">
+  <input type="password" id="pw" placeholder="密碼" autocomplete="current-password" autofocus>
+  <label><input type="checkbox" id="keep" checked> 這台裝置下次不用再輸入</label>
+  <button>開啟</button>
+  <div id="msg"></div>
+</form>
+<script>
+const bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const msg = t => { document.getElementById("msg").textContent = t; };
+const hmacKey = raw => crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+
+async function open(box, keys) {  // keys: 64 bytes from the password
+  const nonce = bytes(box.nonce), cipher = bytes(box.data);
+  const enc = await hmacKey(keys.slice(0, 32)), mac = await hmacKey(keys.slice(32));
+  const signed = new Uint8Array(nonce.length + cipher.length); signed.set(nonce); signed.set(cipher, nonce.length);
+  const tag = new Uint8Array(await crypto.subtle.sign("HMAC", mac, signed)), want = bytes(box.tag);
+  if (tag.length !== want.length || tag.some((b, i) => b !== want[i])) return null;  // wrong password
+  const blocks = Math.floor(cipher.length / 32) + 1, plain = new Uint8Array(cipher.length);
+  for (let start = 0; start < blocks; start += 512) {
+    const jobs = [];
+    for (let i = start; i < Math.min(blocks, start + 512); i++) {
+      const input = new Uint8Array(20); input.set(nonce); new DataView(input.buffer).setUint32(16, i);
+      jobs.push(crypto.subtle.sign("HMAC", enc, input));
+    }
+    (await Promise.all(jobs)).forEach((block, n) => {
+      const pad = new Uint8Array(block), at = (start + n) * 32;
+      for (let j = 0; j < 32 && at + j < cipher.length; j++) plain[at + j] = cipher[at + j] ^ pad[j];
+    });
+  }
+  const stream = new Blob([plain]).stream().pipeThrough(new DecompressionStream("deflate"));
+  return await new Response(stream).text();
+}
+
+async function unlock(keys, remember) {
+  const box = await (await fetch("owner.dat?v=" + Date.now())).json();
+  if (!keys) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(document.getElementById("pw").value),
+                                               "PBKDF2", false, ["deriveBits"]);
+    keys = new Uint8Array(await crypto.subtle.deriveBits(
+      { name: "PBKDF2", hash: "SHA-256", salt: bytes(box.salt), iterations: box.rounds }, base, 512));
+  }
+  const html = await open(box, keys);
+  if (html === null) return false;
+  try {
+    if (remember) localStorage.setItem("owner-keys", btoa(String.fromCharCode(...keys)));
+  } catch (e) {}
+  document.open(); document.write(html); document.close();
+  return true;
+}
+
+document.getElementById("f").onsubmit = async e => {
+  e.preventDefault(); msg("開啟中…");
+  try { if (!await unlock(null, document.getElementById("keep").checked)) msg("密碼不正確"); }
+  catch (err) { msg("無法開啟:" + err.message); }
+};
+(async () => {  // a device that was told to remember opens straight away
+  let saved = null;
+  try { saved = localStorage.getItem("owner-keys"); } catch (e) {}
+  if (!saved) return;
+  msg("開啟中…");
+  try { if (!await unlock(bytes(saved), false)) { localStorage.removeItem("owner-keys"); msg("請重新輸入密碼"); } }
+  catch (err) { msg(""); }
+})();
+</script>
+</body>
+</html>
