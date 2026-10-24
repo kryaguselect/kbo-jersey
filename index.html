@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="description" content="韓國職棒 KBO 各隊官方商城球衣的尺寸庫存與代購價，定時更新。代購請洽 LINE @840ghkhg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="KBO 球衣庫存查詢｜KR YAGU 選物">
+<meta property="og:description" content="韓國職棒 KBO 各隊官方商城球衣的尺寸庫存與代購價，定時更新。代購請洽 LINE @840ghkhg">
+<meta property="og:image" content="https://kryaguselect.github.io/kbo-jersey/logo.png">
+<meta property="og:image:width" content="660">
+<meta property="og:image:height" content="660">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="KBO 球衣庫存查詢">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// iPhone/iPad zoom the page in when a field with small text is tapped (search box, size and 背號 menus);
+// capping the scale stops that, and pinch-zoom still works there
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))
+  document.querySelector('meta[name="viewport"]').content += ", maximum-scale=1";
+</script>
+<title>KBO 球衣庫存查詢</title>
+<style>
+  :root { --bg:#f6f5fb; --card:#fff; --ink:#1c1c1c; --muted:#6b6b6b; --line:#e4e1ef; --ok:#0b6a34; --ok-bg:#cdeedb; --no:#b6b6bc; --no-bg:#f3f3f6; --accent:#14235f; --bar:#dcd6f7; --bar-ink:#14235f; --bar-line:#c9c1ee; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141318; --card:#1e1e1e; --ink:#eee; --muted:#9a9a9a; --line:#333; --ok:#7fdca4; --ok-bg:#173524; --no:#6a6a6a; --no-bg:#262626; --accent:#b9adf5; --bar:#2a2550; --bar-ink:#e9e5ff; --bar-line:#3d3670; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", "Apple SD Gothic Neo", sans-serif; }
+  header { padding:20px 16px 8px; max-width:1200px; margin:0 auto; }
+  h1 { margin:0; font-size:22px; }
+  #updated { font-size:13px; opacity:.8; }
+  #updated span + span::before { content:" · "; }
+  #updated b { font-weight:700; }
+  #updated a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+  /* the banner uses the shop logo's lavender with navy text; in dark mode a deep purple of the same family (--bar*) */
+  .top { position:sticky; top:0; z-index:2; background:var(--bar); color:var(--bar-ink); border-bottom:1px solid var(--bar-line); }
+  .top label.check { color:var(--bar-ink); }  /* title + filters stay on screen while scrolling */
+  .filters > div { max-width:1200px; margin:0 auto; padding:10px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:4px 12px; font:inherit; font-size:13px; cursor:pointer; }
+  .chip[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #teams .chip { font-size:16px; font-weight:600; padding:8px 18px; }  /* teams: the main choice */
+  #cats .chip { font-size:12px; padding:2px 10px; }                    /* categories: secondary */
+  .pick, #perPage { display:none; }
+  @media (max-width:640px) {  /* phones: team and category become two dropdowns instead of chip rows; desktop keeps the chips */
+    #teams, #cats { display:none !important; }
+    .pick { display:block; flex:1 1 0; min-width:0; font-size:16px; font-weight:600; padding:9px 10px; }  /* team | category side by side */
+    .pick[hidden] { display:none; }
+    /* a short banner: small title, one-line info, tight rows */
+    header { padding:8px 12px 2px; }
+    h1 { font-size:21px; }
+    #updated { font-size:12px; line-height:1.35; }
+    #updated span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #updated span + span::before { content:""; }
+    .filters > div { padding:4px 12px 7px; gap:6px; }
+    #size, #sort, #q { font-size:15px; padding:8px 8px; }
+    #size, #sort { flex:none; max-width:31%; }
+    label.check { font-size:15px; }
+    #q { min-width:0; }
+    .filters > div::before { content:""; flex-basis:100%; order:1; height:0; margin:-3px 0; }  /* line break after the two dropdowns */
+    #size, #sort, label.check, #q, #perPage { order:2; }
+    /* 4 件 / 2 件 switch (phones only): how many jerseys fill one screen */
+    #perPage { display:block; flex:none; font:inherit; font-size:14px; font-weight:600; padding:8px 10px; border-radius:8px;
+               border:1px solid var(--bar-ink); background:var(--bar-ink); color:var(--bar); white-space:nowrap; }
+    /* "2 件": one row of two tall cards fills the screen; bigger text, the photo takes the rest */
+    .two main { grid-auto-rows:calc(100svh - var(--top, 150px) - 12px); }
+    .two .body { padding:8px 9px 10px; gap:6px; }
+    .two .name { font-size:16px; line-height:1.3; -webkit-line-clamp:4; }
+    .two .tag { display:block; font-size:11px; }
+    .two .price { font-size:17px; }
+    .two .ship { font-size:12px; white-space:normal; }
+    .two .sizes { gap:5px; max-height:none; }
+    .two .size { font-size:13px; padding:2px 7px; border-radius:6px; }
+    .two .kits { gap:6px; max-height:none; }
+    .two select.kit { font-size:14px; padding:6px 6px; }
+    .two .custom { font-size:12px; padding:3px 9px; }
+    .batches { display:none; }  /* no room in the four-per-screen cards */
+    .two .batches { display:block; }
+  }
+  @media (prefers-color-scheme: dark) { .chip[aria-pressed="true"] { color:#111; } }
+  select, input[type=search] { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink); }
+  input[type=search] { flex:1; min-width:160px; }
+  label.check { display:flex; gap:6px; align-items:center; font-size:14px; }
+  label.check[hidden] { display:none; }
+  .fixedkit { font-size:13px; font-weight:600; margin-top:6px; }
+  #sort[hidden] { display:none; }
+  main { max-width:1200px; margin:0 auto; padding:16px; display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; position:relative; }
+  .custom { position:absolute; top:10px; left:10px; background:#14235f; color:#fff; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; }
+  .card img { width:100%; aspect-ratio:1; object-fit:cover; background:var(--no-bg); display:block; }
+  .body { padding:12px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .tag { font-size:12px; color:var(--muted); }
+  .name { font-weight:600; font-size:14px; }
+  .name a { color:inherit; text-decoration:none; }
+  .name a:hover { text-decoration:underline; }
+  .price { font-size:14px; display:flex; align-items:baseline; gap:6px; }
+  /* size chart: a small link at the end of the price line (no extra height on phones) and a pop-up table */
+  /* "尺寸表" as a small outlined button (owner's choice 2026-10-25: easier to notice than a link) */
+  .chartBtn { margin-left:auto; border:1px solid var(--accent); background:var(--card); border-radius:999px; padding:1px 9px; font:inherit; font-size:12px; font-weight:600; line-height:1.5; color:var(--accent); cursor:pointer; white-space:nowrap; }
+  .chartBtn:hover { background:var(--accent); color:var(--card); }
+  @media (max-width:640px) { .chartBtn { font-size:11px; padding:0 7px; } }
+  #chart { border:1px solid var(--line); border-radius:12px; padding:0; background:var(--card); color:var(--ink); max-width:min(480px, calc(100vw - 32px)); width:100%; }
+  #chart .in { padding:16px; position:relative; }
+  #chart::backdrop { background:rgba(0,0,0,.45); }
+  #chart h2 { font-size:15px; margin:0 32px 2px 0; }
+  #chart .sub { font-size:12px; color:var(--muted); margin-bottom:10px; }
+  #chart table { width:100%; border-collapse:collapse; font-size:13px; text-align:center; font-variant-numeric:tabular-nums; }
+  #chart th, #chart td { padding:6px 4px; border-bottom:1px solid var(--line); }
+  #chart th { color:var(--muted); font-weight:600; font-size:12px; }
+  #chart td:first-child { font-weight:600; }
+  #chart tr.out td { color:var(--no); }
+  #chart tr.out td:first-child { text-decoration:line-through; }
+  #chart tr.ok td:first-child { color:var(--ok); }
+  #chart .okText { color:var(--ok); font-weight:600; }
+  #chart .note { font-size:12px; color:var(--muted); margin-top:10px; line-height:1.6; }
+  #chart .note b { color:var(--ink); }
+  #chart .note b.tip { color:#dc2626; white-space:nowrap; }  /* starts its own line, never split */  /* "建議" in red (owner's request) */
+  @media (prefers-color-scheme: dark) { #chart .note b.tip { color:#f87171; } }
+  /* size suggestion: the customer's own shirt width -> the closest size on this chart */
+  #chart .suggest { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:13px; }
+  #chart .suggest input { width:64px; font:inherit; font-size:16px; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); }
+  #chart .suggest .body { display:contents; }
+  #chart .suggest .body[hidden] { display:none; }
+  #chart .suggest .toggle { order:-1; border:0; background:none; padding:0; font:inherit; font-size:13px; font-weight:600; color:var(--accent); cursor:pointer; }
+  #chart .suggest.folded .toggle { order:1; margin-left:auto; }
+  #chart .suggest .clear { order:2; border:0; background:none; padding:0; font:inherit; font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; }
+  #chart .suggest:not(.folded) .clear { order:-1; }
+  #chart .suggest.folded .brief { flex:1; order:0; font-size:13px; }
+  #chart .suggest .brief[hidden] { display:none; }
+  #chart .cpbl { flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:13px; }
+  #chart .cpbl select { font:inherit; font-size:14px; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); }
+  #chart .changes .filters { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; font-size:13px; margin-bottom:8px; }
+  #chart .changes select { font:inherit; font-size:14px; padding:3px 6px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); }
+  #chart .changes h3 { font-size:13px; margin:12px 0 2px; color:var(--muted); }
+  #chart .changes .row { display:grid; grid-template-columns:42px 1fr; gap:2px 8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  #chart .changes .time { color:var(--muted); font-variant-numeric:tabular-nums; }
+  #chart .changes .name { border:0; background:none; padding:0; font:inherit; font-weight:600; color:var(--ink); text-align:left; cursor:pointer; }
+  #chart .changes .name small { font-weight:400; color:var(--muted); margin-right:4px; }
+  #chart .changes .note { grid-column:2; margin:0; color:var(--ink); font-size:13px; }
+  #chart .changes .tag { display:inline-block; font-size:11px; font-weight:600; padding:0 6px; border-radius:6px; margin-right:6px; background:var(--no-bg); color:var(--muted); }
+  #chart .changes .tag.new, #chart .changes .tag.back { background:var(--ok-bg); color:var(--ok); }
+  #chart .changes .tag.price { background:#fde8e8; color:#c81e1e; }
+  @media (prefers-color-scheme: dark) { #chart .changes .tag.price { background:#3a1d1d; color:#f87171; } }
+  #chart .changes .empty { color:var(--muted); font-size:13px; padding:12px 0; }
+  #chart .howto { border:0; background:none; padding:0; font:inherit; font-size:12px; color:var(--accent); text-decoration:underline; cursor:pointer; }
+  #chart .howtoFig { flex-basis:100%; display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); line-height:1.5; }
+  #chart .howtoFig[hidden] { display:none; }
+  #chart .howtoFig b { color:var(--ink); }
+  #chart .howtoFig svg { width:150px; flex:none; color:var(--ink); }
+  #chart .advice { flex-basis:100%; font-size:12px; color:var(--muted); }
+  #chart .advice b { color:var(--ink); }
+  #chart tr.suggested td { background:rgba(245,180,0,.22); }
+  #chart tr.suggested td:first-child::after { content:"合身"; margin-left:4px; font-size:10px; font-weight:600; color:#a15c00; }
+  #chart tr.suggestedLoose td { background:rgba(245,180,0,.09); }
+  @media (prefers-color-scheme: dark) {
+    #chart tr.suggested td:first-child::after, #chart tr.suggestedLoose td:first-child::after { color:#fbbf24; }
+    #chart tr.suggested td { background:rgba(245,180,0,.28); }
+  }
+  #chart tr.smallest td { background:rgba(160,160,160,.15); }
+  #chart tr.smallest td:first-child::after { content:"最小"; margin-left:4px; font-size:10px; font-weight:600; color:var(--muted); }
+  #chart tr.suggestedLoose td:first-child::after { content:"寬鬆"; margin-left:4px; font-size:10px; font-weight:600; color:#a15c00; }
+  #chart .close { position:absolute; top:10px; right:10px; border:0; background:none; font-size:22px; line-height:1; color:var(--muted); cursor:pointer; padding:4px 8px; }
+  .ship { font-size:12px; color:#b45309; }
+  .ship.free { color:#15803d; }
+  .sizes { display:flex; flex-wrap:wrap; gap:4px; }
+  .size { font-size:12px; padding:2px 7px; border-radius:6px; background:var(--ok-bg); color:var(--ok); white-space:nowrap; }
+  .size:not(.out) { font-weight:600; }
+  .size.out { background:var(--no-bg); color:var(--no); text-decoration:line-through; }
+  .size.hit { outline:2px solid var(--ok); }
+  .kits { display:flex; flex-direction:column; gap:4px; margin-top:4px; }
+  .batches { font-size:11px; color:var(--muted); line-height:1.5; }
+  .batches a { color:inherit; }
+  select.kit { width:100%; font-size:12px; padding:4px 6px; }
+  @media (max-width:640px) {  /* phones only: two jerseys per row (about four on screen); desktop is unchanged */
+    main { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; padding:10px; }
+    .body { padding:8px; gap:5px; }
+    .name { font-size:13px; }
+    .tag { font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .price { font-size:13px; }
+    .ship { font-size:10px; }
+    .size { font-size:11px; padding:1px 5px; }
+    .custom { top:6px; left:6px; font-size:10px; padding:2px 7px; }
+    select.kit { font-size:11px; padding:4px; min-width:0; }
+    /* exactly two rows (four jerseys) fill the screen below the banner, on any phone: the row height is worked out
+       from the visible screen height (svh = with the browser's bars showing) and the banner height (--top, set by
+       script); the photo takes whatever room the text leaves, shown whole */
+    main { gap:5px; padding:5px 6px 6px; grid-auto-rows:calc((100svh - var(--top, 150px) - 13px) / 2); }
+    .card { border-radius:10px; min-height:0; }
+    .card img { flex:1 1 0; min-height:0; height:auto; aspect-ratio:auto; object-fit:contain; background:#fff; }
+    .body { flex:none; padding:5px 7px 6px; gap:3px; }
+    .name { font-size:12px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .tag { display:none; }
+    .price { font-size:13px; font-weight:600; }
+    .ship { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sizes { gap:3px; max-height:36px; overflow:hidden; }
+    .size { font-size:10px; padding:0 4px; border-radius:4px; }
+    .kits { gap:3px; margin-top:1px; max-height:49px; overflow:hidden; }
+    select.kit { padding:1px 4px; }
+  }
+  #empty { grid-column:1/-1; text-align:center; color:var(--muted); padding:40px 0; }
+</style>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){ dataLayer.push(arguments); }
+if (location.hostname.endsWith("github.io")) {
+  const s = document.createElement("script"); s.async = true; s.src = "https://www.googletagmanager.com/gtag/js?id=G-XZSF0YB7BD";
+  document.head.appendChild(s);
+  gtag("js", new Date()); gtag("config", "G-XZSF0YB7BD");
+}
+</script>
+</head>
+<body>
+<div class="top">
+<header>
+  <h1>KBO 球衣庫存查詢</h1>
+  <div id="updated"></div>
+</header>
+<div class="filters"><div>
+  <div class="chips" id="teams"></div>
+  <div class="chips" id="cats" style="flex-basis:100%"></div>
+  <select class="pick" id="teamSel" aria-label="球隊"></select>
+  <select class="pick" id="catSel" aria-label="分類"></select>
+  <select id="size" aria-label="尺寸"><option value="">全尺寸</option></select>
+  <select id="sort" aria-label="排序"><option value="">排序</option><option value="asc">價錢低到高</option><option value="desc">價錢高到低</option></select>
+  <label class="check"><input type="checkbox" id="instock" checked> 只看有貨</label>
+  <input type="search" id="q" placeholder="搜尋名稱">
+  <button type="button" id="perPage" aria-label="切換一個畫面顯示幾件球衣"></button>
+</div></div>
+</div>
+<main id="list"></main>
+<dialog id="chart"></dialog>
+
+<script>
+// index.html?set=nc-kiwoom loads data-nc-kiwoom.js instead of data.js
+const set = new URLSearchParams(location.search).get("set");
+document.write('<script src="data' + (/^[\w-]+$/.test(set || "") ? "-" + set : "") + '.js?v=' + Date.now() + '"><\/script>');
+document.write('<script src="prices.js?v=' + Date.now() + '"><\/script>');
+if (!/github\.io$/.test(location.hostname)) document.write('<script src="changes.js?v=' + Date.now() + '"><\/script>');  // owner's 最近變動
+</script>
+<script>
+// the public build ships its data scrambled (see build_site.py); undo that here
+if (window.__d) {
+  const bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const key = bytes(window.__k), mixed = bytes(window.__d).reverse();
+  window.DATA = JSON.parse(new TextDecoder().decode(mixed.map((b, n) => b ^ key[n % key.length] ^ (n * 7 & 255))));
+  delete window.__d; delete window.__k;
+}
+const DATA = window.DATA || { items: [], updated: null };
+const state = { team: "", cat: "", size: "", instock: true, q: "", sort: "" };
+
+// "95(M)", "MD(95)", "095" and "95" all mean the same chest size
+const sizeKey = s => { const m = String(s).match(/\d{2,3}/); return m && !/키즈|세|Y[A-Z]/.test(s) ? String(+m[0]) : null; };
+
+// teams whose shops the crawler cannot read yet still get a chip (not on the public build)
+const PENDING = DATA.shop ? [] : ["樂天巨人", "起亞虎"];
+// fixed order for the team buttons (the crawl order changes from run to run); teams not listed go to the end
+const TEAM_ORDER = ["國家代表隊", "LG 雙子", "斗山熊", "培證英雄", "KT 巫師", "韓華鷹", "NC 恐龍", "三星獅", "樂天巨人", "起亞虎", "SSG 登陸者"];
+const teamRank = t => (TEAM_ORDER.indexOf(t) + 1) || TEAM_ORDER.length + 1;
+const teams = [...new Set([...DATA.items.map(i => i.team), ...PENDING])].sort((a, b) => teamRank(a) - teamRank(b));
+const sizeKeys = [...new Set(DATA.items.flatMap(i => i.sizes.map(s => sizeKey(s.size))).filter(Boolean))].sort((a, b) => a - b);
+
+// resale prices come from prices.js (generated from prices.csv by prices.py)
+const PRICES = Object.assign({ tiers: {}, items: {}, names: {}, categories: {}, kits: {} }, window.PRICES);
+// the public build (build_site.py) ships jerseys with zh/twd already filled in and no shop url or KRW price
+const zhName = i => i.zh || PRICES.names[itemId(i.url)] || i.name;
+const zhCat = c => PRICES.categories[c] || c;
+// jerseys whose 背號 dropdown offers a custom name/number choice (wording comes from marking-names.csv)
+const CUSTOM = "可客製化背號球衣";
+const playerZh = (k, p) => p.zh || (PRICES.players || {})[k.name + "|" + p.name] || p.name;
+const isCustom = i => (i.markings || []).some(k => k.players.some(p => p.available && playerZh(k, p).includes("客製化")));
+// jerseys the shop has cut the price of (crawler sets "was" = KRW price before the cut; the public build only ships "sale")
+const SALE = "降價球衣";
+const isSale = i => !!(i.sale || i.was);
+// per-team categories for one player: jerseys whose 背號 dropdown has that player (still available), owner's request
+// in that category the card shows the player's 背號 fixed (no dropdown) and one price: jersey + 背號 - discount;
+// the discount depends on the jersey's (Chinese) category name: the first key it contains wins
+const PLAYER_CATS = { "韓華鷹": { "王彥程背號球衣": { ko: "왕옌청", label: "19 왕옌청 (王彥程)", discount: { "球迷版": 150, "球員版": 150 } } } };
+const discountOf = (i, pc) => {
+  const names = (i.categories || []).map(zhCat).join(" ");
+  const key = Object.keys(pc.discount || {}).find(k => names.includes(k));
+  return key ? pc.discount[key] : 0;
+};
+// jerseys that take a custom name/number count too: the customer can have that player's name put on (owner's request)
+// 只看有貨 on (always on the public site): the player's 背號 must still be available; off (owner's page): any jersey listing him
+const hasPlayer = (i, ko) => isCustom(i) || (i.markings || []).some(k => k.players.some(p => p.name.includes(ko)
+  && (p.available || !state.instock)));
+const playerCat = (i, c) => (PLAYER_CATS[i.team] || {})[c];
+const inCat = (i, c) => c === CUSTOM ? isCustom(i) : c === SALE ? isSale(i)
+  : playerCat(i, c) ? hasPlayer(i, playerCat(i, c).ko) : (i.categories || []).includes(c);
+const itemId = url => {
+  if (!url) return "";
+  const m = url.match(/\/product\/[^?]*?\/(\d+)\/category\/|goodsNo=(\d+)|productId=(\d+)|\/category\/detail\/(\d+)|itemId=(\d+)|PROD_CD=(\w+)/);
+  return m ? url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0] + "/" + (m[1] || m[2] || m[3] || m[4] || m[5] || m[6]) : url;
+};
+// a per-jersey price wins; otherwise use the price table keyed by the shop's KRW price
+const shipFee = i => i.ship || (PRICES.ship || {})[itemId(i.url)];  // shop charges shipping below its free-shipping threshold
+// does jersey + this 背號 reach the free-shipping threshold? (public site ships a ready-made "free" flag instead of KRW prices)
+// a choice with its own KRW price: from the shop page, or the kit price plus the 加價 in marking-names.csv
+const ownKrw = (k, p) => p.price || (PRICES.playerKrw || {})[k.name + "|" + p.name];
+const kitFree = (i, k, p) => {
+  const flag = p && p.free !== undefined ? p.free : k.free;
+  if (flag !== undefined) return flag;
+  const limit = (PRICES.shipping || {})[i.team];
+  return !!limit && (i.price || 0) + ((p && ownKrw(k, p)) || k.price || 0) >= limit;
+};
+const shipText = i => "單買另加運費 NT$" + shipFee(i) + ((i.markings || []).some(k => kitFree(i, k)) ? "(加購背號免加)" : "");
+const priceOf = i => { const id = itemId(i.url), tier = PRICES.tiers[i.price];  // 代購價 in TWD, or undefined
+  return i.twd || PRICES.items[id] || (tier && tier + ((PRICES.extra || {})[id] || 0)) || undefined; };
+const priceText = i => { const p = shownPrice(i); return p ? "NT$" + p.toLocaleString() : "價格請洽詢"; };
+// the 背號 choice used in a player category: that player's own choice, or else the custom name/number choice
+const playerChoice = (i, pc) => {
+  const all = (i.markings || []).flatMap(k => k.players.map(p => ({ k, p })));
+  return all.find(x => x.p.available && x.p.name.includes(pc.ko)) || all.find(x => x.p.available && playerZh(x.k, x.p).includes("客製化"))
+    || all.find(x => x.p.name.includes(pc.ko));  // owner's page with 只看有貨 off: priced as if his 背號 were available
+};
+const choiceCost = ({ k, p }) => p.twd || PRICES.tiers[ownKrw(k, p)] || k.twd || PRICES.tiers[k.price];
+const activePlayerCat = i => state.cat && playerCat(i, state.cat);
+const shownPrice = i => {  // jersey + the player's 背號 - discount while that player's category is open
+  const pc = activePlayerCat(i), base = priceOf(i), x = pc && playerChoice(i, pc);
+  if (!pc || !base) return base;
+  // jerseys sold with a mandatory 背號 (surcharges.csv, e.g. 韓華 열마킹) already carry its price: don't add it twice
+  const kit = (PRICES.extra || {})[itemId(i.url)] && !PRICES.items[itemId(i.url)] || i.kitIncluded ? 0 : x && choiceCost(x);
+  return kit === undefined || kit === null ? base : base + kit - discountOf(i, pc);
+};
+
+// 背號 (marking kits: name + number sets sold as add-ons): one dropdown per kit, listing its players
+function markingRows(i) {
+  if (!(i.markings || []).length) return "";
+  return el("div", { className: "kits", onchange: e => {  // picking a 背號 may lift the order over the free-shipping threshold
+      if (e.target.selectedIndex > 0)
+        track("select_marking", { item_name: zhName(i), team: i.team, player: e.target.selectedOptions[0].textContent.replace(/＋.*|\(售完\)/g, "") });
+      const note = e.currentTarget.closest(".card").querySelector(".ship");
+      if (!note) return;
+      const free = [...e.currentTarget.querySelectorAll("select")].some(s => s.selectedIndex > 0 && s.selectedOptions[0].dataset.free);
+      note.textContent = free ? "已加購背號,免另加運費" : shipText(i);
+      note.classList.toggle("free", free);
+    } },
+    ...i.markings.map(k => {
+      const twd = k.twd || PRICES.tiers[k.price];
+      const title = (k.zh || PRICES.kits[k.name] || k.name) + (twd ? " NT$" + twd.toLocaleString() : "");
+      return el("select", { className: "kit", ariaLabel: title },
+        el("option", { value: "", textContent: title }),
+        ...k.players.map(p => {
+          const cost = p.twd || PRICES.tiers[ownKrw(k, p)] || twd;  // own price when it differs from the kit's (e.g. captain marking)
+          const o = el("option", { textContent: playerZh(k, p) + (cost ? "＋NT$" + cost.toLocaleString() : "") + (p.available ? "" : "(售完)"), disabled: !p.available });
+          if (kitFree(i, k, p)) o.dataset.free = "1";
+          return o;
+        }));
+    }));
+}
+
+// player category: a fixed 背號 line instead of the dropdowns; the shipping note only when jersey + 背號 is still under the threshold
+function playerRows(i) {
+  const pc = activePlayerCat(i), x = playerChoice(i, pc);
+  return [shipFee(i) && !(x && kitFree(i, x.k, x.p)) ? el("div", { className: "ship", textContent: "單買另加運費 NT$" + shipFee(i) }) : "",
+          el("div", { className: "fixedkit", textContent: "背號:" + pc.label })];
+}
+
+// Google Analytics events: only the customer site has the tag (build_site.py); elsewhere this does nothing
+const track = (name, params = {}) => { if (window.gtag) gtag("event", name, params); };
+// a jersey in GA's own product format, so views show up in its built-in product report without extra setup
+const gaItem = i => ({ items: [{ item_name: zhName(i), item_category: i.team, price: shownPrice(i) || undefined, currency: "TWD" }] });
+const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+
+function renderFilters() {
+  const box = document.getElementById("teams");
+  box.replaceChildren(...["", ...teams].map(t => {
+    const b = el("button", { className: "chip", textContent: t || "全部球隊" });
+    b.setAttribute("aria-pressed", state.team === t);
+    b.onclick = () => { const x = box.scrollLeft; state.team = t; state.cat = ""; renderFilters(); render(); box.scrollLeft = x;
+      track("select_team", { team: t || "全部球隊" }); };
+    return b;
+  }));
+  // the shop's own categories, shown once a team that has them is picked
+  const mine = state.team ? DATA.items.filter(i => i.team === state.team) : [];
+  const cats = [...new Set(mine.flatMap(i => i.categories || []))];
+  for (const [c, pc] of Object.entries(PLAYER_CATS[state.team] || {}))
+    if (cats.length && mine.some(i => hasPlayer(i, pc.ko))) cats.push(c);
+  if (cats.length && mine.some(isCustom)) cats.push(CUSTOM);
+  // 降價球衣 is left out when one of the shop's own categories already lists exactly the same jerseys (KIA's 出清球衣)
+  const shown = mine.filter(i => !state.instock || i.sizes.some(s => s.available));
+  const onSale = shown.filter(isSale);
+  const sameAsShopCategory = cats.some(c => c !== CUSTOM && !(PLAYER_CATS[state.team] || {})[c] && (list => list.length === onSale.length && list.every(isSale))(shown.filter(i => inCat(i, c))));
+  if (cats.length && onSale.length && !sameAsShopCategory) cats.push(SALE);
+  const catBox = document.getElementById("cats");
+  catBox.hidden = !cats.length;
+  catBox.replaceChildren(...(cats.length ? ["", ...cats] : []).map(c => {
+    const b = el("button", { className: "chip", textContent: c ? zhCat(c) : "全部分類" });
+    b.setAttribute("aria-pressed", state.cat === c);
+    b.onclick = () => { const x = catBox.scrollLeft; state.cat = c; renderFilters(); render(); catBox.scrollLeft = x;
+      track("select_category", { team: state.team, category: c ? zhCat(c) : "全部分類" }); };
+    return b;
+  }));
+  // phones show the same two choices as dropdowns
+  const teamSel = document.getElementById("teamSel"), catSel = document.getElementById("catSel");
+  teamSel.replaceChildren(...["", ...teams].map(t => el("option", { value: t, textContent: t || "全部球隊", selected: state.team === t })));
+  teamSel.onchange = () => { state.team = teamSel.value; state.cat = ""; renderFilters(); render();
+    track("select_team", { team: state.team || "全部球隊" }); };
+  catSel.hidden = !cats.length;
+  catSel.replaceChildren(...["", ...cats].map(c => el("option", { value: c, textContent: c ? zhCat(c) : "全部分類", selected: state.cat === c })));
+  catSel.onchange = () => { state.cat = catSel.value; renderFilters(); render();
+    track("select_category", { team: state.team, category: state.cat ? zhCat(state.cat) : "全部分類" }); };
+}
+
+// size charts (size-charts.csv via prices.py; the public build ships them inside its data)
+const CHARTS = DATA.charts || PRICES.charts || {};
+const chartOf = i => CHARTS[i.chart || (PRICES.chartOf || {})[itemId(i.url)]];
+// size suggestion (owner's request): the customer enters the chest width of a shirt that fits them well, laid flat
+// (and, optionally, its length); the chart's 胸寬 (or 胸圍 ÷ 2) picks the size. 合身 = the smallest size at least that
+// wide as their shirt (owner's choice 2026-10-25: never narrower), 寬鬆 = one size up; both are shown. A length that differs from the
+// picked size by 3 cm or more gets a note. Remembered on that device for every chart.
+const remember = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const recall = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+// "怎麼量": a shirt laid flat, chest width armpit to armpit, length from the back collar to the hem
+const HOWTO_SVG = `<svg viewBox="0 0 220 150" role="img" aria-label="量法示意:胸寬為腋下到腋下,衣長為後領中心到下襬">
+  <path d="M78 14 L60 18 L20 40 L34 66 L56 56 L56 136 L164 136 L164 56 L186 66 L200 40 L160 18 L142 14 Q110 30 78 14 Z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <line x1="58" y1="60" x2="162" y2="60" stroke="#d97706" stroke-width="2.5"/>
+  <path d="M58 60 l7 -4 v8 z M162 60 l-7 -4 v8 z" fill="#d97706"/>
+  <text x="66" y="77" font-size="12" fill="#d97706" font-weight="700">胸寬</text>
+  <line x1="110" y1="24" x2="110" y2="134" stroke="#2563eb" stroke-width="2" stroke-dasharray="5 3"/>
+  <path d="M110 24 l-4 7 h8 z M110 134 l-4 -7 h8 z" fill="#2563eb"/>
+  <text x="116" y="112" font-size="12" fill="#2563eb" font-weight="700">衣長</text>
+</svg>`;
+let suggestTimer;
+// the customer site remembers the entry on that device for every chart; the owner's pages never do (the owner looks
+// sizes up for many different customers, owner's request 2026-10-25), and drop anything an earlier version kept
+const SUGGEST_KEYS = ["my-chest", "my-length", "my-cpbl", "my-fit"];
+if (!DATA.shop) SUGGEST_KEYS.forEach(k => remember(k, null));
+const keep = (k, v) => { if (DATA.shop) remember(k, v); };
+const kept = k => DATA.shop ? recall(k) : null;
+function suggestBox(i, c, rows, has) {
+  const w = c.cols.indexOf("胸寬"), g = c.cols.indexOf("胸圍"), L = c.cols.indexOf("衣長");
+  if (w < 0 && g < 0) return "";  // nothing to compare with
+  if (DATA.shop && !DATA.suggest) return "";  // customer site: not switched on yet (build_site.py PUBLIC_SIZE_SUGGEST)
+  const widths = c.rows.map(r => w >= 0 ? r[w + 1] : r[g + 1] / 2);
+  const num = (key, ph, label) => el("input", { type: "number", inputMode: "decimal", min: 20, max: 120, step: 0.5,
+    placeholder: ph, value: kept(key) || "", "aria-label": label });
+  const chest = num("my-chest", "例 56", "我的衣服胸寬(公分)"), len = num("my-length", "選填", "我的衣服衣長(公分,選填)");
+  // or: "I wear size L of a CPBL team's jersey" (cpbl-sizes.csv) fills both boxes from that team's official table
+  const CPBL = DATA.cpbl || PRICES.cpbl || {};
+  const cpblTeam = el("select", { "aria-label": "中職球隊" }, el("option", { value: "", textContent: "中職球隊" }),
+    ...Object.keys(CPBL).map(t => el("option", { value: t, textContent: t })));
+  const cpblSize = el("select", { "aria-label": "平常穿的尺寸" });
+  const fillSizes = () => cpblSize.replaceChildren(el("option", { value: "", textContent: "尺寸" }),
+    ...(CPBL[cpblTeam.value] || []).map(([sz]) => el("option", { value: sz, textContent: sz })));
+  const saved = (kept("my-cpbl") || "").split("|");
+  if (CPBL[saved[0]]) { cpblTeam.value = saved[0]; fillSizes(); cpblSize.value = saved[1] || ""; } else fillSizes();
+  const fromCpbl = () => { const r = (CPBL[cpblTeam.value] || []).find(x => x[0] === cpblSize.value); return r && String(chest.value) === String(r[1]) ? r : null; };
+  cpblTeam.onchange = () => { fillSizes(); keep("my-cpbl", null); };
+  cpblSize.onchange = () => {
+    const r = (CPBL[cpblTeam.value] || []).find(x => x[0] === cpblSize.value);
+    if (!r) return;
+    chest.value = r[1]; keep("my-chest", r[1]);
+    if (r[2] != null) { len.value = r[2]; keep("my-length", r[2]); }
+    keep("my-cpbl", cpblTeam.value + "|" + cpblSize.value);
+    apply(true);
+  };
+  const fig = el("div", { className: "howtoFig", hidden: true, innerHTML: HOWTO_SVG },
+    el("div", {}, "衣服平放、扣好扣子：", el("b", { textContent: "胸寬" }), "量腋下到腋下的直線；",
+      el("b", { textContent: "衣長" }), "量後領中心到下襬。"));
+  const howto = el("button", { type: "button", className: "howto", textContent: "怎麼量？",
+    onclick: () => { fig.hidden = !fig.hidden; howto.textContent = fig.hidden ? "怎麼量？" : "收起"; } });
+  const advice = el("div", { className: "advice" });
+  // one-line version shown while folded (owner's request 2026-10-25: the full text pushed the chart down on phones)
+  const brief = el("div", { className: "brief" });
+  const short = n => [el("b", { textContent: c.rows[n][0] }), has(c.rows[n][0]) === true ? "" : "（售完）"];
+  const label = n => [el("b", { textContent: c.rows[n][0] }), has(c.rows[n][0]) === true ? "（有貨）" : "（目前售完）"];
+  // the jersey's own chest width, so the customer can see why (charts in 胸圍 are halved)
+  const widthOf = n => "，胸寬約 " + +widths[n].toFixed(1) + " 公分";
+  let paint;  // set below, once the folding parts exist
+  function apply(changed) {
+    rows.forEach(r => r.classList.remove("suggested", "suggestedLoose", "smallest"));
+    const mine = parseFloat(chest.value);
+    if (!(mine >= 30 && mine <= 90)) {
+      advice.replaceChildren("量一件自己常穿、尺寸剛好的衣服，填入胸寬就會標出建議尺寸。");
+      brief.replaceChildren();
+      if (changed && typeof paint === "function") paint();
+      return;
+    }
+    let n = widths.findIndex(x => x != null && x >= mine);
+    // even the smallest size is more than 3 cm wider than their shirt: no 合身 here, say how much bigger it is
+    if (n === 0 && widths[0] - mine > 3) {
+      rows[0].classList.add("smallest");
+      brief.replaceChildren("最小的 ", ...short(0), " 也會偏大");
+      advice.replaceChildren("這件最小的 ", ...label(0), "胸寬約 ", el("b", { textContent: +widths[0].toFixed(1) }),
+        " 公分，比你的衣服寬約 " + +(widths[0] - mine).toFixed(1) + " 公分，穿起來會偏大。請再確認量法，或參考其他版型。");
+      if (changed) { clearTimeout(suggestTimer); suggestTimer = setTimeout(() => track("size_suggest", { item_name: zhName(i), team: i.team, size: "偏大" }), 1200); }
+      return;
+    }
+    const tooSmall = n < 0;
+    if (tooSmall) n = widths.length - 1;
+    const loose = !tooSmall && n < widths.length - 1 ? n + 1 : -1;
+    rows[n].classList.add("suggested");
+    if (loose >= 0) rows[loose].classList.add("suggestedLoose");
+    const b = ["建議：合身 ", ...short(n)];
+    if (loose >= 0) b.push("、寬鬆 ", ...short(loose));
+    if (has(c.rows[n][0]) !== true) {
+      const up = c.rows.findIndex((r, k) => k > n && has(r[0]) === true);
+      if (up >= 0 && up !== loose) b.push("，有貨最接近 ", el("b", { textContent: c.rows[up][0] }));
+    }
+    brief.replaceChildren(...b);
+    const out = ["合身選 ", ...label(n), widthOf(n)];
+    if (loose >= 0) out.push("；想寬鬆選 ", ...label(loose), widthOf(loose));
+    const via = fromCpbl();
+    out.push(via ? `。依${cpblTeam.value} ${via[0]}（胸寬 ${+via[1]} 公分）推算。` : "。你的衣服胸寬 " + mine + " 公分。");
+    if (tooSmall) out.push("這件最大的尺寸可能還是偏小。");
+    // the 合身 size is sold out: point at the closest size that is in stock (bigger first: never narrower than their shirt)
+    if (has(c.rows[n][0]) !== true) {
+      const up = c.rows.findIndex((r, k) => k > n && has(r[0]) === true);
+      const down = [...c.rows.keys()].reverse().find(k => k < n && has(c.rows[k][0]) === true);
+      if (up >= 0) out.push("合身尺寸目前售完，有貨中最接近的是 ", el("b", { textContent: c.rows[up][0] }), widthOf(up), "。");
+      else if (down != null) out.push("較大的尺寸都售完了，有貨的 ", el("b", { textContent: c.rows[down][0] }), "會比你的衣服窄約 " + +(mine - widths[down]).toFixed(1) + " 公分。");
+      else out.push("這件目前沒有合適的尺寸有貨。");
+    }
+    const myLen = parseFloat(len.value), theirs = L >= 0 ? c.rows[n][L + 1] : null;
+    if (myLen >= 40 && myLen <= 110 && theirs != null && Math.abs(theirs - myLen) >= 3)
+      out.push(`${c.rows[n][0]} 的衣長比你的衣服${theirs > myLen ? "長" : "短"}約 ${+Math.abs(theirs - myLen).toFixed(1)} 公分。`);
+    out.push("僅供參考，球衣版型各家不同。");
+    advice.replaceChildren(...out);
+    if (changed && typeof paint === "function") paint();
+    if (changed) { clearTimeout(suggestTimer); suggestTimer = setTimeout(() => track("size_suggest", { item_name: zhName(i), team: i.team, size: c.rows[n][0] }), 1200); }
+  }
+  chest.oninput = () => { keep("my-chest", chest.value || null); keep("my-cpbl", null); cpblTeam.value = ""; fillSizes(); apply(true); };
+  len.oninput = () => { keep("my-length", len.value || null); apply(true); };
+  apply(false);
+  // folded by default so the chart itself is what people see first (owner's request 2026-10-25): just a
+  // "幫我選尺寸" button, or the remembered result with "修改" once they have entered something
+  const body = el("div", { className: "body", hidden: true },
+    el("label", {}, "我的衣服胸寬 ", chest, " 公分"),
+    L >= 0 ? el("label", {}, "衣長 ", len, " 公分") : "",
+    howto,
+    Object.keys(CPBL).length ? el("div", { className: "cpbl" }, "或選我穿的中職球衣：", cpblTeam, cpblSize) : "",
+    fig);
+  const known = () => parseFloat(chest.value) >= 30 && parseFloat(chest.value) <= 90;
+  const toggle = el("button", { type: "button", className: "toggle" });
+  const clear = el("button", { type: "button", className: "clear", textContent: "清除", onclick: () => {
+    chest.value = ""; len.value = ""; cpblTeam.value = ""; fillSizes();
+    SUGGEST_KEYS.forEach(k => keep(k, null));
+    apply(false); body.hidden = false; paint(); chest.focus();
+  } });
+  const box = el("div", { className: "suggest" }, toggle, clear, body, brief, advice);
+  paint = () => {
+    toggle.textContent = !body.hidden ? "收起 ▴" : known() ? "修改 ▸" : "幫我選尺寸 ▸";
+    advice.hidden = body.hidden;  // the full text only while open; folded shows the one-line brief
+    brief.hidden = !body.hidden || !known();
+    box.classList.toggle("folded", body.hidden);
+    clear.hidden = !known();
+  };
+  toggle.onclick = () => { body.hidden = !body.hidden; paint(); if (!body.hidden && !known()) chest.focus(); };
+  paint();
+  return box;
+}
+
+function showChart(i) {
+  const c = chartOf(i), dlg = document.getElementById("chart");
+  // stock by the shop's own label ("XS", "1") and by chest size ("95"); chart rows read "S(90)", "1(95)" or "95"
+  const stock = Object.fromEntries(i.sizes.flatMap(s => [[s.size, s.available], [sizeKey(s.size), s.available]]));
+  const has = size => [size, size.split("(")[0], sizeKey(size)].map(k => stock[k]).find(v => v !== undefined);
+  const cm = v => v == null ? "–" : String(+v.toFixed(1));
+  const rows = c.rows.map(([size, ...v]) => el("tr", {
+    className: has(size) === true ? "ok" : "out" },  // sold out, or a size the shop no longer lists
+    el("td", { textContent: size }), ...v.map(x => el("td", { textContent: cm(x) }))));
+  dlg.replaceChildren(el("div", { className: "in" },  // padding lives here, so a click on the dialog itself is outside
+    el("button", { type: "button", className: "close", textContent: "×", "aria-label": "關閉", onclick: () => dlg.close() }),
+    el("h2", { textContent: zhName(i) }),
+    el("div", { className: "sub" }, "單位：公分（衣服平放測量）· ", el("span", { className: "okText", textContent: "綠色 = 有貨" }), "，灰色 = 售完"),
+    suggestBox(i, c, rows, has),
+    el("table", {},
+      el("thead", {}, el("tr", {}, el("th", { textContent: "尺寸" }), ...c.cols.map(n => el("th", { textContent: n })))),
+      el("tbody", {}, ...rows)),
+    // the measurement being explained is in bold (owner's request)
+    el("div", { className: "note" },
+      ...(c.cols.includes("胸寬") ? [el("b", { textContent: "胸寬" }), "是腋下到腋下的直線寬度，×2 約等於胸圍。"] : []),
+      ...(c.cols.includes("胸圍") ? [el("b", { textContent: "胸圍" }), "是胸部一圈的長度，衣服平放量胸寬再 ×2 就能比對。"] : []),
+      ...(c.cols.includes("肩袖長") ? [el("b", { textContent: "肩袖長" }), "是從後領中心量到袖口的長度。"] : []),
+      el("br"), el("b", { className: "tip", textContent: "建議" }), "拿一件自己常穿、尺寸剛好的衣服平放量來比對。官方標示誤差約 1–2 公分。")));
+  dlg.showModal();
+  track("view_size_chart", { item_name: zhName(i), team: i.team, ...gaItem(i) });
+}
+// owner's pages: what the hourly crawls changed in the last 7 days (changes.py writes changes.js; owner.dat has it inlined)
+const CHANGE_TAGS = { new: "新上架", back: "補貨", price: "價格", gone: "售完", out: "售完", kit: "背號" };
+const changesView = { team: "", important: true };
+function showChanges() {
+  const dlg = document.getElementById("chart"), all = window.CHANGES || [];
+  const rank = t => (TEAM_ORDER.indexOf(t) + 1) || 99;
+  const teams = [...new Set(all.map(c => c.team))].sort((a, b) => rank(a) - rank(b));
+  const zhPunct = t => t.replace(/:/g, "：").replace(/;/g, "；").replace(/,(?!\d)/g, "，");
+  const week = "日一二三四五六";
+  // the log keeps the name a jersey had then and translations change since, so look for the closest current name
+  const pairs = t => { t = t.replace(/\s+/g, ""); return new Set([...t].slice(1).map((ch, n) => t[n] + ch)); };
+  const findByName = (team, name) => {
+    const want = pairs(name);
+    let best = name, score = 0.5;
+    for (const i of DATA.items.filter(i => i.team === team)) {
+      const have = pairs(zhName(i)), same = [...want].filter(p => have.has(p)).length;
+      const s = 2 * same / (want.size + have.size || 1);
+      if (s > score) { best = zhName(i); score = s; }
+    }
+    return best;
+  };
+  // the tag says what happened, so the same word is not repeated at the start of the text; prices say up or down
+  const tagOf = n => {
+    const won = [...n.text.matchAll(/₩([\d,]+)/g)].map(m => +m[1].replace(/,/g, ""));
+    if (n.k === "price" && won.length >= 2) return won[1] < won[0] ? "降價" : "漲價";
+    return CHANGE_TAGS[n.k] || "其他";
+  };
+  const list = el("div");
+  const paint = () => {
+    const keep = n => !changesView.important || ["new", "back", "price"].includes(n.k);
+    const shown = all.filter(c => !changesView.team || c.team === changesView.team)
+      .map(c => ({ ...c, notes: c.notes.filter(keep) })).filter(c => c.notes.length);
+    let day = "";
+    list.replaceChildren(...shown.flatMap(c => {
+      const d = c.t.slice(0, 10), out = [];
+      if (d !== day) {
+        day = d;
+        const [y, m, dd] = d.split("-").map(Number);
+        out.push(el("h3", { textContent: `${m}/${dd}（${week[new Date(y, m - 1, dd).getDay()]}）` }));
+      }
+      out.push(el("div", { className: "row" },
+        el("span", { className: "time", textContent: c.t.slice(11) }),
+        // tap the name: close this and show that jersey in the list (sold out too)
+        el("button", { type: "button", className: "name", onclick: () => {
+            dlg.close();
+            const q = findByName(c.team, c.name);
+            Object.assign(state, { team: c.team, cat: "", q, size: "", instock: false });
+            document.getElementById("q").value = q;
+            document.getElementById("size").value = "";
+            document.getElementById("instock").checked = false;
+            renderFilters(); render(); scrollTo(0, 0);
+          } }, ...(changesView.team ? [] : [el("small", { textContent: c.team })]), c.name),
+        ...c.notes.map(n => el("p", { className: "note" }, el("span", { className: "tag " + n.k, textContent: tagOf(n) }),
+          zhPunct(n.text.replace(/^(新上架|補貨|售完|價格)\s*:?\s*/, ""))))));
+      return out;
+    }));
+    if (!shown.length) list.append(el("div", { className: "empty", textContent: "最近 7 天沒有符合的變動" }));
+  };
+  const teamSel = el("select", { onchange: e => { changesView.team = e.target.value; paint(); } },
+    ...["", ...teams].map(t => el("option", { value: t, textContent: t || "全部球隊", selected: changesView.team === t })));
+  const important = el("input", { type: "checkbox", checked: changesView.important,
+    onchange: e => { changesView.important = e.target.checked; paint(); } });
+  dlg.replaceChildren(el("div", { className: "in changes" },
+    el("button", { type: "button", className: "close", textContent: "×", "aria-label": "關閉", onclick: () => dlg.close() }),
+    el("h2", { textContent: "最近變動" }),
+    el("div", { className: "sub", textContent: "每小時排程比對官方商城的結果，最近 7 天，新的在上面。點球衣名稱可在列表中找到它。" }),
+    el("div", { className: "filters" }, teamSel, el("label", {}, important, " 只看新上架、補貨、價格變動")),
+    list));
+  paint();
+  dlg.showModal();
+}
+document.getElementById("chart").addEventListener("click", e => { if (e.target.id === "chart") e.target.close(); });  // tap outside closes
+
+// a jersey counts as viewed once its card has been on screen for 2 seconds (once per visit; customer site only)
+const viewed = new Set();
+const viewWatch = window.IntersectionObserver && DATA.shop && new IntersectionObserver(entries => entries.forEach(e => {
+  const card = e.target;
+  clearTimeout(card.viewTimer);
+  if (e.isIntersecting) card.viewTimer = setTimeout(() => {
+    if (viewed.has(card.item)) return;
+    viewed.add(card.item);
+    track("view_item", { item_name: zhName(card.item), team: card.item.team, ...gaItem(card.item) });
+  }, 2000);
+}), { threshold: 0.6 });
+
+function render() {
+  const q = state.q.trim().toLowerCase();
+  const items = DATA.items.filter(i => {
+    if (state.team && i.team !== state.team) return false;
+    if (state.cat && !inCat(i, state.cat)) return false;
+    if (q && !(i.name + " " + zhName(i)).toLowerCase().includes(q)) return false;
+    const pool = state.size ? i.sizes.filter(s => sizeKey(s.size) === state.size) : i.sizes;
+    if (state.size && !pool.length) return false;
+    return !state.instock || pool.some(s => s.available);
+  });
+  const list = document.getElementById("list");
+  if (state.sort)  // by 代購價; jerseys without a price go last either way
+    items.sort((a, b) => { const x = shownPrice(a), y = shownPrice(b);
+      return x && y ? (state.sort === "asc" ? x - y : y - x) : x ? -1 : y ? 1 : 0; });
+  list.replaceChildren(...items.map(i => {
+    const link = i.url ? el("a", { href: i.url, target: "_blank", rel: "noopener", textContent: zhName(i) }) : zhName(i);
+    return el("article", { className: "card" },
+      i.image ? el("img", { src: i.image, alt: "", loading: "lazy", referrerPolicy: "no-referrer" }) : "",
+      isCustom(i) ? el("span", { className: "custom", textContent: "可客製化背號" }) : "",
+      el("div", { className: "body" },
+        el("div", { className: "name" }, link),
+        zhName(i) !== i.name ? el("div", { className: "tag", textContent: i.name }) : "",
+        el("div", { className: "price" }, el("span", { textContent: priceText(i) }),
+          chartOf(i) ? el("button", { type: "button", className: "chartBtn", textContent: "尺寸表", onclick: () => showChart(i) }) : ""),
+        ...(activePlayerCat(i) ? playerRows(i) : [shipFee(i) ? el("div", { className: "ship", textContent: shipText(i) }) : ""]),
+        el("div", { className: "sizes" }, ...i.sizes.map(s => el("span", {
+          className: "size" + (s.available ? "" : " out") + (state.size && sizeKey(s.size) === state.size ? " hit" : ""),
+          textContent: s.size + (s.qty ? " ×" + s.qty : ""),
+          title: s.available ? "有貨" : "售完",
+        }))),
+        activePlayerCat(i) ? "" : markingRows(i),
+        // owner's page only: which production batch (separate product page) has which sizes
+        i.batches ? el("div", { className: "batches" }, ...i.batches.map(b => el("div", {},
+          el("a", { href: b.url, target: "_blank", rel: "noopener", textContent: b.label }),
+          ":" + (b.sizes.map(s => s.size + (s.qty ? "×" + s.qty : "")).join("、") || "無庫存")))) : ""));
+  }));
+  if (viewWatch) viewWatch.disconnect();  // the old cards are gone
+  if (viewWatch) [...list.querySelectorAll(".card")].forEach((card, n) => { card.item = items[n]; viewWatch.observe(card); });
+  if (!items.length) list.append(el("div", { id: "empty", textContent: PENDING.includes(state.team) && !DATA.items.some(i => i.team === state.team) ? "這一隊的官方商城還抓不到資料,球衣整理中" : "沒有符合條件的球衣" }));
+}
+
+document.getElementById("size").append(...sizeKeys.map(k => el("option", { value: k, textContent: k })));
+document.getElementById("size").onchange = e => { state.size = e.target.value; render(); if (state.size) track("filter_size", { size: state.size }); };
+document.getElementById("sort").onchange = e => { state.sort = e.target.value; render(); if (state.sort) track("sort_price", { order: state.sort }); };
+document.getElementById("instock").onchange = e => { state.instock = e.target.checked; renderFilters(); render(); };
+let searchTimer;  // one search event once typing pauses, not one per letter
+document.getElementById("q").oninput = e => { state.q = e.target.value; render();
+  clearTimeout(searchTimer); searchTimer = setTimeout(() => state.q.trim() && track("search", { search_term: state.q.trim() }), 1500); };
+const FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeubvbvvKQYr19OJxumj0gESTSWbIZ64MBFS5wiAu9P2S7wlA/viewform";  // the owner's Google Form (customers' suggestions)
+const FEEDBACK_SHEET = "";  // the replies; the owner's pages link here instead (owner 2026-10-25)
+// two parts (shop + LINE link | count + time) so a phone can put them on two lines instead of cutting the time off
+if (DATA.updated) {
+  const when = new Date(DATA.updated).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const info = document.getElementById("updated");
+  // "由 <b>店名</b> 整理 · 代購請洽 <a>LINE</a>": same colour as the title, the shop name in bold
+  if (DATA.shop) info.append(el("span", {}, "由 ", DATA.shopUrl ? el("a", { href: DATA.shopUrl, target: "_blank", rel: "noopener" }, el("b", { textContent: DATA.shop }))
+                                                            : el("b", { textContent: DATA.shop }), " 整理",
+    ...(DATA.line ? [" · " + (DATA.line.lead || ""), el("a", { href: DATA.line.url, target: "_blank", rel: "noopener", textContent: DATA.line.text })] : [])));
+  info.append(el("span", {}, `${DATA.items.length} 件球衣 · 更新於 ${when}`,
+    // feedback form (the owner's Google Form): owner's pages first, customers once build_site.py PUBLIC_FEEDBACK is on
+    ...(FEEDBACK_URL && (!DATA.shop || DATA.feedback) ? [" · ", el("a", { href: DATA.shop ? FEEDBACK_URL : FEEDBACK_SHEET, target: "_blank", rel: "noopener",
+      textContent: "意見回饋", onclick: () => track("open_feedback") })] : []),
+    ...(!DATA.shop && window.CHANGES ? [" · ", el("a", { href: "#", textContent: "最近變動", onclick: e => { e.preventDefault(); showChanges(); } })] : [])));
+} else document.getElementById("updated").textContent = "尚無資料,請先執行 python3 crawler.py";
+if (DATA.shop) {  // public build
+  // the LINE / shop links in the banner: how many visitors go on to contact the shop
+  document.getElementById("updated").addEventListener("click", e => {
+    const a = e.target.closest("a");
+    if (a) track(a.href.includes("lin.ee") ? "contact_line" : "open_shop_page");
+  });
+  document.querySelector("label.check").hidden = true;  // no 只看有貨 switch for customers: it stays on, sold-out jerseys are not listed
+} else document.getElementById("sort").hidden = true;  // price sorting is for customers only (owner's request)
+// phones: a button switches between four and two jerseys per screen; the choice is remembered on that phone
+const perPage = document.getElementById("perPage");
+const setPerPage = two => {
+  document.documentElement.classList.toggle("two", two);
+  perPage.textContent = two ? "2 件" : "4 件";
+  try { localStorage.setItem("per-page", two ? "2" : "4"); } catch (e) {}
+};
+perPage.onclick = () => setPerPage(!document.documentElement.classList.contains("two"));
+let savedPerPage = null;
+try { savedPerPage = localStorage.getItem("per-page"); } catch (e) {}
+setPerPage(savedPerPage === "2");
+// phones size the jersey rows from the banner height (see the CSS for main)
+const topBar = document.querySelector(".top");
+const setTop = () => document.documentElement.style.setProperty("--top", topBar.offsetHeight + "px");
+if (window.ResizeObserver) new ResizeObserver(setTop).observe(topBar);
+addEventListener("resize", setTop);
+// a reload on returning to the home-screen app comes back to the same team, category and filters
+const RELOAD_KEY = "reload-state";
+try {
+  const kept = JSON.parse(sessionStorage.getItem(RELOAD_KEY) || "null");
+  sessionStorage.removeItem(RELOAD_KEY);
+  if (kept) {
+    Object.assign(state, kept);
+    document.getElementById("q").value = state.q;
+    document.getElementById("size").value = state.size;
+    document.getElementById("sort").value = state.sort;
+    document.getElementById("instock").checked = state.instock;
+  }
+} catch (e) {}
+const reloadPage = () => {
+  try { sessionStorage.setItem(RELOAD_KEY, JSON.stringify(state)); } catch (e) {}
+  location.reload();
+};
+renderFilters();
+render();
+setTop();
+// opened from the iPhone home screen the page runs as an app that iPhone keeps in the background, with no
+// pull-down-to-refresh: coming back to it after 30 minutes reloads, so the stock shown is not hours old
+// (owner's choice 2026-10-25: this only, no pull-down gesture; on the customer site too)
+if (navigator.standalone || matchMedia("(display-mode: standalone)").matches) {
+  const loadedAt = Date.now();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && Date.now() - loadedAt > 30 * 60 * 1000) reloadPage();
+  });
+}
+// read the price table straight from the CSV, so saving it and reloading is enough
+// (the public build has no CSV; its prices are already in the data)
+fetch("price-table.csv?v=" + Date.now()).then(r => r.ok ? r.text() : "").then(text => {
+  for (const line of text.split(/\r?\n/).slice(1)) {
+    const [krw, twd] = line.split(",");
+    const price = parseInt((twd || "").replace(/[^\d]/g, ""), 10);
+    if (parseInt(krw, 10) && price) PRICES.tiers[parseInt(krw, 10)] = price;
+  }
+  render();
+}).catch(() => {});
+</script>
+</body>
+</html>
